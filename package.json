@@ -1,6 +1,6 @@
 {
   "name": "@mendeel/mcp-mixpanel",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A Model Context Protocol (MCP) server for Mixpanel analytics, providing AI assistants with access to Mixpanel data, events, and analytics.",
   "type": "module",
   "main": "./build/index.js",

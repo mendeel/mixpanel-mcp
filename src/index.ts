@@ -231,6 +231,7 @@ function setupHandlers(server: Server, config: {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
+        // Event Tools
         {
           name: "get_today_top_events",
           description: "Get today's top events from Mixpanel. Useful for quickly identifying the most active events happening today, spotting trends, and monitoring real-time user activity.",
@@ -276,6 +277,73 @@ function setupHandlers(server: Server, config: {
           }
         },
         {
+          name: "aggregate_event_counts",
+          description: "Get event counts over time periods. Useful for analyzing event volume trends and identifying patterns in user activity over time.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              event: {
+                type: "string",
+                description: "The event name to get counts for"
+              },
+              from_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to begin querying from (inclusive)"
+              },
+              to_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to query to (inclusive)"
+              },
+              unit: {
+                type: "string",
+                enum: ["hour", "day", "week", "month"],
+                description: "The time unit for aggregation, defaults to day"
+              }
+            },
+            required: ["event", "from_date", "to_date"]
+          }
+        },
+        {
+          name: "aggregated_event_property_values",
+          description: "Analyze specific event properties and their values. Useful for understanding property distributions and identifying common values.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              event: {
+                type: "string",
+                description: "The event name to analyze properties for"
+              },
+              property: {
+                type: "string",
+                description: "The property name to get values for"
+              },
+              from_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to begin querying from (inclusive)"
+              },
+              to_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to query to (inclusive)"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of property values to return"
+              }
+            },
+            required: ["event", "property", "from_date", "to_date"]
+          }
+        },
+        
+        // User Profile Tools
+        {
           name: "profile_event_activity",
           description: "Get data for a profile's event activity. Useful for understanding individual user journeys, troubleshooting user-specific issues, and analyzing behavior patterns of specific users.",
           inputSchema: {
@@ -304,6 +372,226 @@ function setupHandlers(server: Server, config: {
             },
             required: ["distinct_ids", "from_date", "to_date"]
           }
+        },
+        {
+          name: "query_profiles",
+          description: "Query user profiles with filtering. Useful for finding users based on profile properties and analyzing user segments.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              where: {
+                type: "string",
+                description: "JSON string representing the filter conditions for profiles"
+              },
+              select: {
+                type: "string",
+                description: "JSON array string of properties to return. If not specified, returns all properties"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of profiles to return"
+              }
+            }
+          }
+        },
+
+        // Analytics Tools
+        {
+          name: "query_retention_report",
+          description: "Analyze user retention patterns. Useful for understanding how well you retain users over time and identifying cohort behavior.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              from_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to begin querying from (inclusive)"
+              },
+              to_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to query to (inclusive)"
+              },
+              born_event: {
+                type: "string",
+                description: "The event that defines when users are 'born' for retention analysis"
+              },
+              event: {
+                type: "string",
+                description: "The event to measure retention for (optional, defaults to any event)"
+              },
+              born_where: {
+                type: "string",
+                description: "JSON string representing additional filters for the born event"
+              },
+              where: {
+                type: "string",
+                description: "JSON string representing additional filters for the retention event"
+              },
+              interval: {
+                type: "string",
+                enum: ["day", "week", "month"],
+                description: "The time interval for retention analysis, defaults to day"
+              },
+              interval_count: {
+                type: "number",
+                description: "Number of intervals to analyze, defaults to 30"
+              }
+            },
+            required: ["from_date", "to_date", "born_event"]
+          }
+        },
+        {
+          name: "query_funnel_report",
+          description: "Get funnel conversion data. Useful for analyzing conversion rates through multi-step user flows and identifying drop-off points.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              from_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to begin querying from (inclusive)"
+              },
+              to_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to query to (inclusive)"
+              },
+              events: {
+                type: "string",
+                description: "JSON array string of events that make up the funnel steps"
+              },
+              funnel_window: {
+                type: "number",
+                description: "Number of days users have to complete the funnel"
+              },
+              interval: {
+                type: "string",
+                enum: ["day", "week", "month"],
+                description: "The time interval for funnel analysis"
+              }
+            },
+            required: ["from_date", "to_date", "events"]
+          }
+        },
+        {
+          name: "list_saved_funnels",
+          description: "List available saved funnels in the project. Useful for discovering existing funnel analyses and getting funnel IDs for further analysis.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              }
+            }
+          }
+        },
+        {
+          name: "list_saved_cohorts",
+          description: "List user cohorts in the project. Useful for discovering existing user segments and getting cohort IDs for analysis.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              }
+            }
+          }
+        },
+
+        // Advanced Tools
+        {
+          name: "custom_jql",
+          description: "Run custom JQL (JSON Query Language) queries. Useful for advanced analytics and custom data analysis beyond standard reports.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              script: {
+                type: "string",
+                description: "The JQL script to execute"
+              }
+            },
+            required: ["script"]
+          }
+        },
+        {
+          name: "query_segmentation_report",
+          description: "Segment events by properties. Useful for analyzing how different user segments behave and comparing event patterns across groups.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              event: {
+                type: "string",
+                description: "The event to segment"
+              },
+              from_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to begin querying from (inclusive)"
+              },
+              to_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to query to (inclusive)"
+              },
+              on: {
+                type: "string",
+                description: "The property to segment by"
+              },
+              where: {
+                type: "string",
+                description: "JSON string representing additional filters"
+              },
+              unit: {
+                type: "string",
+                enum: ["hour", "day", "week", "month"],
+                description: "The time unit for segmentation, defaults to day"
+              }
+            },
+            required: ["event", "from_date", "to_date", "on"]
+          }
+        },
+        {
+          name: "query_insights_report",
+          description: "Get saved insights reports. Useful for accessing pre-configured analytics reports and dashboards.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_id: {
+                type: "string",
+                description: "The Mixpanel project ID. Optional since it has a default."
+              },
+              report_id: {
+                type: "string",
+                description: "The ID of the saved insights report to retrieve"
+              },
+              from_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to begin querying from (inclusive)"
+              },
+              to_date: {
+                type: "string",
+                description: "The date in yyyy-mm-dd format to query to (inclusive)"
+              }
+            },
+            required: ["report_id"]
+          }
         }
       ]
     };
@@ -314,14 +602,48 @@ function setupHandlers(server: Server, config: {
     const { name, arguments: args } = request.params;
 
     switch (name) {
+      // Event Tools
       case "get_today_top_events":
         return await handleGetTodayTopEvents(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
       
       case "get_top_events":
         return await handleGetTopEvents(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
         
+      case "aggregate_event_counts":
+        return await handleAggregateEventCounts(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+        
+      case "aggregated_event_property_values":
+        return await handleAggregatedEventPropertyValues(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+
+      // User Profile Tools
       case "profile_event_activity":
         return await handleProfileEventActivity(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+        
+      case "query_profiles":
+        return await handleQueryProfiles(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+
+      // Analytics Tools
+      case "query_retention_report":
+        return await handleQueryRetentionReport(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+        
+      case "query_funnel_report":
+        return await handleQueryFunnelReport(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+        
+      case "list_saved_funnels":
+        return await handleListSavedFunnels(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+        
+      case "list_saved_cohorts":
+        return await handleListSavedCohorts(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+
+      // Advanced Tools
+      case "custom_jql":
+        return await handleCustomJQL(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+        
+      case "query_segmentation_report":
+        return await handleQuerySegmentationReport(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
+        
+      case "query_insights_report":
+        return await handleQueryInsightsReport(args, { SERVICE_ACCOUNT_USER_NAME, SERVICE_ACCOUNT_PASSWORD, DEFAULT_PROJECT_ID, MIXPANEL_BASE_URL });
 
       default:
         throw new Error(`Unknown tool: ${name}`);
@@ -486,6 +808,562 @@ async function handleProfileEventActivity(args: any, config: any) {
         {
           type: "text",
           text: `Error fetching profile event activity: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+// Additional tool handlers for the new tools
+
+async function handleAggregateEventCounts(args: any, config: any) {
+  const { project_id = config.DEFAULT_PROJECT_ID, event, from_date, to_date, unit = "day" } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    const url = `${config.MIXPANEL_BASE_URL}/events?project_id=${project_id}&event=${encodeURIComponent(event)}&from_date=${from_date}&to_date=${to_date}&unit=${unit}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error fetching event counts:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error fetching event counts: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleAggregatedEventPropertyValues(args: any, config: any) {
+  const { project_id = config.DEFAULT_PROJECT_ID, event, property, from_date, to_date, limit = 100 } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    const url = `${config.MIXPANEL_BASE_URL}/events/properties/values?project_id=${project_id}&event=${encodeURIComponent(event)}&name=${encodeURIComponent(property)}&from_date=${from_date}&to_date=${to_date}&limit=${limit}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error fetching event property values:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error fetching event property values: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleQueryProfiles(args: any, config: any) {
+  const { project_id = config.DEFAULT_PROJECT_ID, where, select, limit = 100 } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    let url = `${config.MIXPANEL_BASE_URL}/engage?project_id=${project_id}`;
+    
+    if (where) {
+      url += `&where=${encodeURIComponent(where)}`;
+    }
+    if (select) {
+      url += `&select=${encodeURIComponent(select)}`;
+    }
+    if (limit) {
+      url += `&limit=${limit}`;
+    }
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error querying profiles:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error querying profiles: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleQueryRetentionReport(args: any, config: any) {
+  const { 
+    project_id = config.DEFAULT_PROJECT_ID, 
+    from_date, 
+    to_date, 
+    born_event, 
+    event, 
+    born_where, 
+    where, 
+    interval = "day", 
+    interval_count = 30 
+  } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    let url = `${config.MIXPANEL_BASE_URL}/retention?project_id=${project_id}&from_date=${from_date}&to_date=${to_date}&born_event=${encodeURIComponent(born_event)}&interval=${interval}&interval_count=${interval_count}`;
+    
+    if (event) {
+      url += `&event=${encodeURIComponent(event)}`;
+    }
+    if (born_where) {
+      url += `&born_where=${encodeURIComponent(born_where)}`;
+    }
+    if (where) {
+      url += `&where=${encodeURIComponent(where)}`;
+    }
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error querying retention report:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error querying retention report: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleQueryFunnelReport(args: any, config: any) {
+  const { 
+    project_id = config.DEFAULT_PROJECT_ID, 
+    from_date, 
+    to_date, 
+    events, 
+    funnel_window = 14,
+    interval = "day"
+  } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    const url = `${config.MIXPANEL_BASE_URL}/funnels?project_id=${project_id}&from_date=${from_date}&to_date=${to_date}&events=${encodeURIComponent(events)}&funnel_window=${funnel_window}&interval=${interval}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error querying funnel report:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error querying funnel report: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleListSavedFunnels(args: any, config: any) {
+  const { project_id = config.DEFAULT_PROJECT_ID } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    const url = `${config.MIXPANEL_BASE_URL}/funnels/list?project_id=${project_id}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error listing saved funnels:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error listing saved funnels: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleListSavedCohorts(args: any, config: any) {
+  const { project_id = config.DEFAULT_PROJECT_ID } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    const url = `${config.MIXPANEL_BASE_URL}/cohorts/list?project_id=${project_id}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error listing saved cohorts:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error listing saved cohorts: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleCustomJQL(args: any, config: any) {
+  const { project_id = config.DEFAULT_PROJECT_ID, script } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    const options = {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        project_id: project_id,
+        script: script
+      })
+    };
+    
+    const response = await fetch(`${config.MIXPANEL_BASE_URL}/jql`, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error executing custom JQL:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error executing custom JQL: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleQuerySegmentationReport(args: any, config: any) {
+  const { 
+    project_id = config.DEFAULT_PROJECT_ID, 
+    event, 
+    from_date, 
+    to_date, 
+    on, 
+    where, 
+    unit = "day" 
+  } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    let url = `${config.MIXPANEL_BASE_URL}/segmentation?project_id=${project_id}&event=${encodeURIComponent(event)}&from_date=${from_date}&to_date=${to_date}&on=${encodeURIComponent(on)}&unit=${unit}`;
+    
+    if (where) {
+      url += `&where=${encodeURIComponent(where)}`;
+    }
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error querying segmentation report:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error querying segmentation report: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+async function handleQueryInsightsReport(args: any, config: any) {
+  const { 
+    project_id = config.DEFAULT_PROJECT_ID, 
+    report_id, 
+    from_date, 
+    to_date 
+  } = args;
+  
+  try {
+    const credentials = `${config.SERVICE_ACCOUNT_USER_NAME}:${config.SERVICE_ACCOUNT_PASSWORD}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+    
+    let url = `${config.MIXPANEL_BASE_URL}/insights?project_id=${project_id}&report_id=${report_id}`;
+    
+    if (from_date) {
+      url += `&from_date=${from_date}`;
+    }
+    if (to_date) {
+      url += `&to_date=${to_date}`;
+    }
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'authorization': `Basic ${encodedCredentials}`
+      }
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data)
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    console.error("Error querying insights report:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error querying insights report: ${errorMessage}`
         }
       ],
       isError: true

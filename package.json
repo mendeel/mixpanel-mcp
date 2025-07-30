@@ -2,9 +2,11 @@
   "name": "mcp-mixpanel",
   "version": "1.0.0",
   "main": "index.js",
+  "module": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "build": "tsc && chmod +x build/index.js",
+    "start": "node build/index.js",
     "postinstall": "npm run build"
   },
   "keywords": [],
@@ -17,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.5",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.2"
   },
   "type": "module",

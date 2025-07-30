@@ -9,6 +9,7 @@ startCommand:
       - username
       - password
       - projectId
+      - region
     properties:
       username:
         type: string
@@ -19,14 +20,18 @@ startCommand:
       projectId:
         type: string
         description: Mixpanel Project ID.
+      region:
+        type: string
+        description: Mixpanel Region (us/eu. Default: us).
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
     (config) => ({
       command: 'node',
-      args: ['build/index.js', config.username, config.password, config.projectId]
+      args: ['build/index.js', config.username, config.password, config.projectId, config.region]
     })
   exampleConfig:
     username: demoUser
     password: demoPass
     projectId: "123456"
+    region: "us"

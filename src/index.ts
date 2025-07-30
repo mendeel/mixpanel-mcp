@@ -1,27 +1,173 @@
+#!/usr/bin/env npx tsx
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-export const configSchema = z.object({
+/**
+ * Parse command line arguments
+ */
+async function parseArgs() {
+  const args = process.argv.slice(2);
+  
+  // Help flag
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Mixpanel MCP Server
+
+Usage:
+  npx mcp-mixpanel [options]
+
+Options:
+  --username, -u <username>       Mixpanel service account username
+  --password, -p <password>       Mixpanel service account password
+  --project-id, -i <project_id>   Default Mixpanel project ID
+  --region, -r <region>           Mixpanel region (us or eu) - default: us
+  --help, -h                      Show this help message
+  --version, -v                   Show version information
+
+Examples:
+  npx mcp-mixpanel --username myuser --password mypass --project-id 12345
+  npx mcp-mixpanel -u myuser -p mypass -i 12345 -r eu
+
+Environment Variables:
+  MIXPANEL_SERVICE_ACCOUNT_USERNAME    Mixpanel service account username
+  MIXPANEL_SERVICE_ACCOUNT_PASSWORD    Mixpanel service account password
+  MIXPANEL_PROJECT_ID                  Default Mixpanel project ID
+  MIXPANEL_REGION                      Mixpanel region (us or eu) - default: us
+  LOG_LEVEL                            Log level (debug, info, warn, error) - default: info
+
+For more information, visit: https://github.com/your-org/mcp-mixpanel
+`);
+    process.exit(0);
+  }
+
+  // Version flag
+  if (args.includes('--version') || args.includes('-v')) {
+    // Read version from package.json
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+      
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const packagePath = path.join(__dirname, '..', 'package.json');
+      
+      const packageContent = fs.readFileSync(packagePath, 'utf8');
+      const packageJson = JSON.parse(packageContent);
+      console.log(`mcp-mixpanel v${packageJson.version}`);
+    } catch (error) {
+      console.log('mcp-mixpanel v1.0.0');
+    }
+    process.exit(0);
+  }
+
+  // Parse username
+  const usernameIndex = args.findIndex(arg => arg === '--username' || arg === '-u');
+  let username = null;
+  
+  if (usernameIndex !== -1 && args[usernameIndex + 1]) {
+    username = args[usernameIndex + 1];
+  } else if (process.env.MIXPANEL_SERVICE_ACCOUNT_USERNAME) {
+    username = process.env.MIXPANEL_SERVICE_ACCOUNT_USERNAME;
+  }
+
+  // Parse password
+  const passwordIndex = args.findIndex(arg => arg === '--password' || arg === '-p');
+  let password = null;
+  
+  if (passwordIndex !== -1 && args[passwordIndex + 1]) {
+    password = args[passwordIndex + 1];
+  } else if (process.env.MIXPANEL_SERVICE_ACCOUNT_PASSWORD) {
+    password = process.env.MIXPANEL_SERVICE_ACCOUNT_PASSWORD;
+  }
+
+  // Parse project ID
+  const projectIdIndex = args.findIndex(arg => arg === '--project-id' || arg === '-i');
+  let projectId = null;
+  
+  if (projectIdIndex !== -1 && args[projectIdIndex + 1]) {
+    projectId = args[projectIdIndex + 1];
+  } else if (process.env.MIXPANEL_PROJECT_ID) {
+    projectId = process.env.MIXPANEL_PROJECT_ID;
+  }
+
+  // Parse region
+  const regionIndex = args.findIndex(arg => arg === '--region' || arg === '-r');
+  let region = 'us'; // default value
+  
+  if (regionIndex !== -1 && args[regionIndex + 1]) {
+    region = args[regionIndex + 1];
+  } else if (process.env.MIXPANEL_REGION) {
+    region = process.env.MIXPANEL_REGION;
+  }
+
+  // Validate region
+  if (!['us', 'eu'].includes(region)) {
+    console.error(`Error: Invalid region '${region}'. Must be 'us' or 'eu'.`);
+    process.exit(1);
+  }
+
+  return { 
+    username, 
+    password, 
+    projectId, 
+    region: region as 'us' | 'eu'
+  };
+}
+
+const configSchema = z.object({
 	service_account_username: z.string().describe("Mixpanel service account username for API authentication"),
 	service_account_password: z.string().describe("Mixpanel service account password for API authentication"),
 	project_id: z.string().describe("Default Mixpanel project ID to use when not specified in tool calls"),
 	region: z.enum(["us", "eu"]).default("us").describe("Mixpanel region - 'us' for mixpanel.com or 'eu' for eu.mixpanel.com"),
 })
 
-export default function ({ config }: { config: z.infer<typeof configSchema> }) {
+// Start the server
+async function main() {
+  // Parse command line arguments and environment variables
+  const args = await parseArgs();
+
+  // Validate required arguments
+  if (!args.username) {
+    console.error("Error: Mixpanel service account username is required. Use --username or set MIXPANEL_SERVICE_ACCOUNT_USERNAME environment variable.");
+    process.exit(1);
+  }
+
+  if (!args.password) {
+    console.error("Error: Mixpanel service account password is required. Use --password or set MIXPANEL_SERVICE_ACCOUNT_PASSWORD environment variable.");
+    process.exit(1);
+  }
+
+  if (!args.projectId) {
+    console.error("Error: Mixpanel project ID is required. Use --project-id or set MIXPANEL_PROJECT_ID environment variable.");
+    process.exit(1);
+  }
+
+  // Create config object
+  const config = {
+    service_account_username: args.username,
+    service_account_password: args.password,
+    project_id: args.projectId,
+    region: args.region
+  };
+
+  // Validate config with schema
+  const validatedConfig = configSchema.parse(config);
   const server = new McpServer({
     name: "mixpanel",
     version: "1.0.0"
   });
 
-  const SERVICE_ACCOUNT_USER_NAME = config.service_account_username;
-  const SERVICE_ACCOUNT_PASSWORD = config.service_account_password;
-  const DEFAULT_PROJECT_ID = config.project_id;
-  const MIXPANEL_REGION = config.region;
+  const SERVICE_ACCOUNT_USER_NAME = validatedConfig.service_account_username;
+  const SERVICE_ACCOUNT_PASSWORD = validatedConfig.service_account_password;
+  const DEFAULT_PROJECT_ID = validatedConfig.project_id;
+  const MIXPANEL_REGION = validatedConfig.region;
 
   const MIXPANEL_BASE_URL = MIXPANEL_REGION === "eu" ? "https://eu.mixpanel.com/api/query" : "https://mixpanel.com/api/query";
 
-  server.tool(
+    server.tool(
   "get_today_top_events",
   "Get today's top events from Mixpanel. Useful for quickly identifying the most active events happening today, spotting trends, and monitoring real-time user activity.",
   {
@@ -81,7 +227,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   }
   )
 
-  server.tool(
+    server.tool(
     "profile_event_activity",
     "Get data for a profile's event activity. Useful for understanding individual user journeys, troubleshooting user-specific issues, and analyzing behavior patterns of specific users.",
     {
@@ -147,7 +293,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "get_top_events",
     "Get a list of the most common events over the last 31 days. Useful for identifying key user actions, prioritizing feature development, and understanding overall platform usage patterns.",
     {
@@ -207,7 +353,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   )
 
-  server.tool(
+    server.tool(
     "aggregate_event_counts",
     "Get unique, general, or average data for a set of events over N days, weeks, or months. Useful for trend analysis, comparing event performance over time, and creating time-series visualizations.",
     {
@@ -305,7 +451,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   )
 
-  server.tool(
+    server.tool(
     "aggregated_event_property_values",
     "Get unique, general, or average data for a single event and property over days, weeks, or months. Useful for analyzing how specific properties affect event performance, segmenting users, and identifying valuable user attributes.",
     {
@@ -417,7 +563,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   )
 
-  server.tool(
+    server.tool(
     "query_insights_report",
     "Get data from your Insights reports. Useful for accessing saved analyses, sharing standardized metrics across teams, and retrieving complex pre-configured visualizations.",
     {
@@ -482,7 +628,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_funnel_report",
     "Get data for a funnel based on a funnel_id. Useful for analyzing user conversion paths, identifying drop-off points in user journeys, and optimizing multi-step processes. Funnel IDs should be retrieved using the list_saved_funnels tool. ",
     {
@@ -557,7 +703,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "list_saved_funnels",
     "Get the names and IDs of your saved funnels. Useful for discovering available funnels for analysis and retrieving funnel IDs needed for the query_funnel_report tool.",
     {
@@ -620,7 +766,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "list_saved_cohorts",
     "Get all cohorts in a given project. Useful for discovering user segments, planning targeted analyses, and retrieving cohort IDs for filtering in other reports.",
     {
@@ -683,7 +829,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_retention_report",
     "Get data from your Retention reports. Useful for analyzing user engagement over time, measuring product stickiness, and understanding how well your product retains users after specific actions. Only use params interval or unit, not both.",
     {
@@ -782,7 +928,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "custom_jql",
     "Run a custom JQL (JSON Query Language) script against your Mixpanel data. Useful for complex custom analyses, advanced data transformations, and queries that can't be handled by standard report types.",
     {
@@ -854,7 +1000,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_segmentation_sum",
     "Sum a numeric expression for events over time. Useful for calculating revenue metrics, aggregating quantitative values, and tracking cumulative totals across different time periods.",
     {
@@ -934,7 +1080,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_profiles",
     "Query Mixpanel user profiles with filtering options. Useful for retrieving detailed user profiles, filtering by specific properties, and analyzing user behavior across different dimensions.",
     {
@@ -1053,7 +1199,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_frequency_report",
     "Get data for frequency of actions over time. Useful for analyzing how often users perform specific actions, identifying patterns of behavior, and tracking user engagement over time.",
     {
@@ -1143,7 +1289,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_segmentation_report",
     "Get data for an event, segmented and filtered by properties. Useful for breaking down event data by user attributes, comparing performance across segments, and identifying which user groups perform specific actions.",
     {
@@ -1232,7 +1378,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_segmentation_bucket",
     "Get data for an event, segmented and filtered by properties, with values placed into numeric buckets. Useful for analyzing distributions of numeric values, creating histograms, and understanding the range of quantitative metrics.",
     {
@@ -1319,7 +1465,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "query_segmentation_average",
     "Averages an expression for events per unit time. Useful for calculating average values like purchase amounts, session durations, or any numeric metric, and tracking how these averages change over time.",
     {
@@ -1404,7 +1550,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "top_event_properties",
     "Get the top property names for an event. Useful for discovering which properties are most commonly associated with an event, prioritizing which dimensions to analyze, and understanding event structure.",
     {
@@ -1472,7 +1618,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  server.tool(
+    server.tool(
     "top_event_property_values",
     "Get the top values for a property. Useful for understanding the distribution of values for a specific property, identifying the most common categories or segments, and planning further targeted analyses.",
     {
@@ -1541,6 +1687,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       }
     }
   );
-
-  return server;
+  // Connect to stdio transport
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("Mixpanel MCP Server running on stdio");
 }
+
+main().catch((error) => {
+  console.error("Fatal error in main():", error);
+  process.exit(1);
+});

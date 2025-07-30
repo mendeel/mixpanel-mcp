@@ -2,9 +2,13 @@
   "name": "mcp-mixpanel",
   "version": "1.0.0",
   "module": "src/index.ts",
+  "bin": {
+    "mcp-mixpanel": "./src/index.ts"
+  },
   "scripts": {
-    "build": "npx @smithery/cli build",
-		"dev": "npx @smithery/cli dev"
+    "build": "tsc",
+    "dev": "npx tsx src/index.ts",
+    "start": "npx tsx src/index.ts"
   },
   "keywords": [],
   "author": "",

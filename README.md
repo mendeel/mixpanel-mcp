@@ -17,14 +17,14 @@ Make sure to go to your Mixpanel Organization Settings to set up a [Mixpanel Ser
 To install mixpanel-mcp for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@dragonkhoi/mixpanel-mcp):
 
 ```bash
-npx -y @smithery/cli install @dragonkhoi/mixpanel-mcp --client claude
+npx -y @smithery/cli install @mendeel/mixpanel-mcp --client claude
 ```
 
 To install mixpanel-mcp for Cursor, go to Settings -> Cursor Settings -> Features -> MCP Servers -> + Add
 
 Select Type: command and paste the below, using the arguments `<USERNAME> <PW> <PROJECT_ID> <REGION>` from Mixpanel. Region can be `us` or `eu`.
 ```
-npx -y @smithery/cli@latest run @dragonkhoi/mixpanel-mcp --config "{\"username\":\"YOUR_SERVICE_ACCT_USERNAME\",\"password\":\"YOUR_SERVICE_ACCT_PASSWORD\",\"projectId\":\"YOUR_MIXPANEL_PROJECT_ID\",\"region\":\"YOUR_MIXPANEL_REGION\"}"
+npx -y @smithery/cli@latest run @mendeel/mixpanel-mcp --config "{\"username\":\"YOUR_SERVICE_ACCT_USERNAME\",\"password\":\"YOUR_SERVICE_ACCT_PASSWORD\",\"projectId\":\"YOUR_MIXPANEL_PROJECT_ID\",\"region\":\"YOUR_MIXPANEL_REGION\"}"
 ```
 
 ### Clone and run locally

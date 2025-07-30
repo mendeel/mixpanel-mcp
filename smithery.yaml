@@ -1,1 +1,29 @@
-runtime: typescript
+runtime: "container"
+build:
+  dockerfile: "Dockerfile"           # Path to your Dockerfile
+  dockerBuildPath: "."               # Docker build context
+startCommand:
+  type: "http"
+  configSchema:                      # JSON Schema for configuration
+    type: "object"
+    properties:
+      service_account_username:
+        type: "string"
+        description: "Mixpanel service account username for API authentication"
+      service_account_password:
+        type: "string"
+        description: "Mixpanel service account password for API authentication"
+      project_id:
+        type: "string"
+        description: "Default Mixpanel project ID to use when not specified in tool calls"
+      region:
+        type: "string"
+        enum: ["us", "eu"]
+        default: "us"
+        description: "Mixpanel region - 'us' for mixpanel.com or 'eu' for eu.mixpanel.com"
+    required: ["service_account_username", "service_account_password", "project_id"]
+  exampleConfig:
+    service_account_username: "your-mixpanel-username"
+    service_account_password: "your-mixpanel-password"
+    project_id: "12345"
+    region: "us"

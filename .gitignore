@@ -12,6 +12,7 @@ yarn.lock
 .pnp.*
 .yarn-integrity
 .npm
+.smithery
 
 # Logs
 logs
